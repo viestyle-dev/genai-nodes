@@ -103,7 +103,9 @@ class _LLMNode(BaseNode):
             settings=lambda: self.properties,
             counter=DailyCounter(path, self.name, today_utc),
         )
-        self._runner.start(asyncio.get_running_loop())
+        loop = asyncio.get_running_loop()
+        self._runner.start(loop)
+        self._provider().preload(loop)  # its SDK, before anything time-critical runs
 
     def finalize(self):
         if self._runner is not None:
@@ -170,7 +172,9 @@ class _LLMNode(BaseNode):
                 kind = type(desc["default_value"])
                 self.properties[key] = kind(properties[key])
         if "provider" in properties:
-            self._provider()  # validate
+            provider = self._provider()  # validates
+            if self._runner is not None and self._runner.loop is not None:
+                provider.preload(self._runner.loop)
 
 
 class LLMDescribeImageNode(_LLMNode):

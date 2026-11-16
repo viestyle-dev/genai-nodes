@@ -3,6 +3,7 @@
 import asyncio
 import json
 import sys
+import threading
 import time
 import types
 from typing import Any, cast
@@ -273,6 +274,58 @@ def test_gemini_provider_runs_off_the_loop(monkeypatch):
     assert captured["generation_config"] == {"max_output_tokens": 1024}
     assert captured["automatic_continuation"] is False and captured["store"] is False
     assert captured["http_options"] == {"retry_options": {"attempts": 1}}  # no SDK retries
+
+
+def test_sdk_import_runs_off_the_loop(monkeypatch):
+    """The first import of a big SDK takes seconds: the event loop must keep running meanwhile."""
+    fake_sdk = types.SimpleNamespace(Client=lambda api_key, http_options=None: types.SimpleNamespace(
+        interactions=types.SimpleNamespace(create=lambda **kw: types.SimpleNamespace(output_text="ok", usage=None))))
+
+    def slow_import(name):
+        time.sleep(0.3)  # importing the SDK the first time
+        return fake_sdk
+
+    monkeypatch.setattr(prov.importlib, "import_module", slow_import)
+
+    async def run():
+        ticks = 0
+
+        async def ticker():
+            nonlocal ticks
+            while True:
+                await asyncio.sleep(0.01)
+                ticks += 1
+
+        task = asyncio.create_task(ticker())
+        response = await prov.GeminiProvider().generate(prov.Request(prompt="p", api_key="k", model="m"))
+        task.cancel()
+        return response, ticks
+
+    response, ticks = asyncio.run(run())
+    assert response.text == "ok"
+    assert ticks >= 10  # about 30 ticks of 10 ms while the import ran (Windows timers are ~15 ms)
+
+
+def test_providers_preload_their_sdk_in_a_worker_thread(monkeypatch):
+    imported = []
+    main = threading.get_ident()
+
+    def record(name):
+        imported.append((name, threading.get_ident() != main))
+        if name == "anthropic":
+            raise ImportError("not installed here")  # reported later, by a request
+        return types.SimpleNamespace()
+
+    monkeypatch.setattr(prov.importlib, "import_module", record)
+
+    async def run():
+        loop = asyncio.get_running_loop()
+        for name in ("gemini", "openrouter", "anthropic"):
+            prov.PROVIDERS[name].preload(loop)
+        await asyncio.sleep(0.2)
+
+    asyncio.run(run())
+    assert sorted(imported) == [("anthropic", True), ("google.genai", True), ("httpx2", True)]
 
 
 def test_openrouter_provider_request_and_429(monkeypatch):

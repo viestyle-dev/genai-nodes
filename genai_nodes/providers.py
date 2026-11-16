@@ -2,17 +2,30 @@
 
 Each provider takes a ``Request`` (prompt, optional image, optional JSON
 schema) and returns a ``Response`` (text, parsed JSON if any, usage). Vendor
-SDKs are imported lazily, so the plugin loads even where an SDK is missing.
+SDKs are imported lazily, so the plugin loads even where an SDK is missing,
+and in a worker thread (``_import_sdk``), so the first request does not stall
+the engine's event loop.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import importlib
 import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
+
+
+async def _import_sdk(module: str):
+    """Import a vendor SDK in a worker thread.
+
+    The first import of an SDK takes seconds (anthropic several, google-genai
+    two); on the event loop it would stall every other node of the engine for
+    that long, and an audio output runs dry.
+    """
+    return await asyncio.to_thread(importlib.import_module, module)
 
 
 class ProviderError(Exception):
@@ -91,14 +104,32 @@ def _strict_schema(schema: Any) -> Any:
     return schema
 
 
+def _preload_sdk(module: str):
+    try:
+        importlib.import_module(module)
+    except ImportError:
+        pass  # reported by the first request, which needs it
+
+
 class Provider:
     name = ""
     default_model = ""
     default_key_env = ""
     key_url = ""  # where to get an API key
+    sdk_module = ""  # imported on first use; preload() imports it ahead
 
     async def generate(self, req: Request) -> Response:  # pragma: no cover - interface
         raise NotImplementedError
+
+    def preload(self, loop: asyncio.AbstractEventLoop):
+        """Import the SDK in a worker thread now, while nothing time-critical runs.
+
+        Even off the event loop, a big SDK's first import holds the GIL for tens of
+        milliseconds at a time; done during a request, an audio callback can miss
+        its cycle.
+        """
+        if self.sdk_module:
+            loop.run_in_executor(None, _preload_sdk, self.sdk_module)
 
 
 class GeminiProvider(Provider):
@@ -108,10 +139,11 @@ class GeminiProvider(Provider):
     default_model = "gemini-3.5-flash-lite"
     default_key_env = "GEMINI_API_KEY"
     key_url = "https://aistudio.google.com/apikey"
+    sdk_module = "google.genai"
 
     async def generate(self, req: Request) -> Response:
         try:
-            from google import genai
+            genai = await _import_sdk(self.sdk_module)
         except ImportError as e:
             raise ProviderError("google-genai is not installed") from e
 
@@ -162,9 +194,10 @@ class OpenRouterProvider(Provider):
     default_key_env = "OPENROUTER_API_KEY"
     key_url = "https://openrouter.ai/settings/keys"
     url = "https://openrouter.ai/api/v1/chat/completions"
+    sdk_module = "httpx2"
 
     async def generate(self, req: Request) -> Response:
-        import httpx2
+        httpx2 = await _import_sdk(self.sdk_module)
 
         prompt = req.prompt + (_json_instruction(req.schema) if req.schema else "")
         content: list[dict] = [{"type": "text", "text": prompt}]
@@ -206,10 +239,11 @@ class AnthropicProvider(Provider):
     default_model = "claude-opus-5-5"
     default_key_env = "ANTHROPIC_API_KEY"
     key_url = "https://platform.claude.com/settings/keys"
+    sdk_module = "anthropic"
 
     async def generate(self, req: Request) -> Response:
         try:
-            import anthropic
+            anthropic = await _import_sdk(self.sdk_module)
         except ImportError as e:
             raise ProviderError("anthropic is not installed") from e
 

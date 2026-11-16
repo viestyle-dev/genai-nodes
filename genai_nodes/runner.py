@@ -95,6 +95,11 @@ class RequestRunner:
     def busy(self) -> bool:
         return self._task is not None and not self._task.done()
 
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop | None:
+        """The event loop while running (between start and stop)."""
+        return self._loop
+
     def start(self, loop: asyncio.AbstractEventLoop):
         self._loop = loop
 
