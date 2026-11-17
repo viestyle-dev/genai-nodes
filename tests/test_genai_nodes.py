@@ -281,11 +281,11 @@ def test_sdk_import_runs_off_the_loop(monkeypatch):
     fake_sdk = types.SimpleNamespace(Client=lambda api_key, http_options=None: types.SimpleNamespace(
         interactions=types.SimpleNamespace(create=lambda **kw: types.SimpleNamespace(output_text="ok", usage=None))))
 
-    def slow_import(name):
+    def slow_import():
         time.sleep(0.3)  # importing the SDK the first time
         return fake_sdk
 
-    monkeypatch.setattr(prov.importlib, "import_module", slow_import)
+    monkeypatch.setattr(prov.GeminiProvider, "_load_sdk", staticmethod(slow_import))
 
     async def run():
         ticks = 0
@@ -310,13 +310,17 @@ def test_providers_preload_their_sdk_in_a_worker_thread(monkeypatch):
     imported = []
     main = threading.get_ident()
 
-    def record(name):
-        imported.append((name, threading.get_ident() != main))
-        if name == "anthropic":
-            raise ImportError("not installed here")  # reported later, by a request
-        return types.SimpleNamespace()
+    def loader(name):
+        def load():
+            imported.append((name, threading.get_ident() != main))
+            if name == "anthropic":
+                raise ImportError("not installed here")  # reported later, by a request
+            return types.SimpleNamespace()
+        return staticmethod(load)
 
-    monkeypatch.setattr(prov.importlib, "import_module", record)
+    for cls, name in ((prov.GeminiProvider, "gemini"), (prov.OpenRouterProvider, "openrouter"),
+                      (prov.AnthropicProvider, "anthropic")):
+        monkeypatch.setattr(cls, "_load_sdk", loader(name))
 
     async def run():
         loop = asyncio.get_running_loop()
@@ -325,7 +329,17 @@ def test_providers_preload_their_sdk_in_a_worker_thread(monkeypatch):
         await asyncio.sleep(0.2)
 
     asyncio.run(run())
-    assert sorted(imported) == [("anthropic", True), ("google.genai", True), ("httpx2", True)]
+    assert sorted(imported) == [("anthropic", True), ("gemini", True), ("openrouter", True)]
+
+
+def test_providers_import_their_sdk_with_import_statements():
+    """PyInstaller bundles what import statements name: the SDKs must be imported that way."""
+    import dis
+
+    for cls, module in ((prov.GeminiProvider, "google"), (prov.OpenRouterProvider, "httpx2"),
+                        (prov.AnthropicProvider, "anthropic")):
+        names = {i.argval for i in dis.get_instructions(cls._load_sdk) if i.opname == "IMPORT_NAME"}
+        assert module in names, cls.__name__
 
 
 def test_openrouter_provider_request_and_429(monkeypatch):
