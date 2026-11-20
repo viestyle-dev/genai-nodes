@@ -421,7 +421,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "nonoha-core", git = "https://github.com/viestyle-dev/nonoha-core.git?rev=8ed784d8c316254d51050f1a0857d22ffde68d2e" },
+    { name = "nonoha-core", git = "https://github.com/viestyle-dev/nonoha-core.git?rev=v1.1.0" },
     { name = "pytest", specifier = ">=8.0" },
 ]
 
@@ -644,8 +644,8 @@ wheels = [
 
 [[package]]
 name = "nonoha-core"
-version = "1.1.0.dev0"
-source = { git = "https://github.com/viestyle-dev/nonoha-core.git?rev=8ed784d8c316254d51050f1a0857d22ffde68d2e#8ed784d8c316254d51050f1a0857d22ffde68d2e" }
+version = "1.1.0"
+source = { git = "https://github.com/viestyle-dev/nonoha-core.git?rev=v1.1.0#690f9e8d3af6a456c5d28b14cf9d509d3cfcd197" }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },

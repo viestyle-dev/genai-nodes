@@ -5,6 +5,8 @@ or interpret signals and features. Requests are event-driven (only on
 `trigger`), paced, and capped per day, so a graph never calls an API in a
 loop.
 
+[genai-nodes on nonoha Hub](https://hub.nonoha.dev/plugins/official/nonoha-official/genai-nodes/): the published versions, and the engine versions and platforms they support.
+
 ## Overview
 
 The nodes call models over HTTPS (cloud APIs or servers you run), so the

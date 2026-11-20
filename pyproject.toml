@@ -24,9 +24,8 @@ Issues     = "https://github.com/viestyle-dev/genai-nodes/issues"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    # Environment values (nonoha_core.environment) arrive in nonoha-core 1.1.
-    # Until 1.1 is tagged, this is the commit that has them.
-    "nonoha-core @ git+https://github.com/viestyle-dev/nonoha-core.git@8ed784d8c316254d51050f1a0857d22ffde68d2e",
+    # Environment values (nonoha_core.environment) arrived in nonoha-core 1.1.
+    "nonoha-core @ git+https://github.com/viestyle-dev/nonoha-core.git@v1.1.0",
 ]
 
 [tool.pytest.ini_options]
@@ -43,4 +42,4 @@ requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [tool.nonoha-hub]
-engine-compatibility = [">=1.1.0.dev0", "<2.0.0"]
+engine-compatibility = [">=1.1.0", "<2.0.0"]
