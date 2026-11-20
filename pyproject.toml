@@ -1,6 +1,6 @@
 [project]
 name = "genai-nodes"
-version = "0.1.0"
+version = "0.2.0"
 description = "A nonoha-engine plugin that calls generative AI models: LLMs describe images or interpret signals and features. Event-driven, paced, with a daily request cap."
 readme = "README.md"
 authors = [{name = "VIE Inc."}]

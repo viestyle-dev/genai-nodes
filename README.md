@@ -26,6 +26,8 @@ Both have `text`, `json`, `busy`, `error` and `usage` outputs. Without a key,
 or when the provider is unreachable, they only report on `error`; the rest of
 the graph keeps running.
 
+Every property also has an input port (`@<name>`, for example `@send_images`), so another node's output can set it.
+
 ## Providers and API keys
 
 | `provider` | Key name (default) | Get a key | Cost | Your data |

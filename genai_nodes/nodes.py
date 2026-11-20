@@ -27,14 +27,14 @@ BYTES = PortValueType(DataType.Uint8, (-1,))
 _SCHEMA_PORT_TYPES = {"number": F32, "integer": F32, "string": STR, "boolean": BOOL}
 
 COMMON_PROPERTIES = {
-    "provider": {"description": "gemini (free tier), openrouter (free models) or anthropic (paid)", "default_value": "gemini"},
-    "model": {"description": "Model id; empty = the provider's default", "default_value": ""},
-    "api_key_env": {"description": "Name of the environment value holding the API key; empty = the provider's default (e.g. GEMINI_API_KEY). Set the value in the editor's Environment settings, the Hub or .env, never in the graph", "default_value": ""},
-    "system": {"description": "System instruction", "default_value": ""},
-    "min_interval_s": {"description": "Minimum seconds between requests", "default_value": 10.0},
-    "max_requests_per_day": {"description": "Requests allowed per UTC day (caps cost)", "default_value": 200},
-    "timeout_s": {"description": "Seconds before a request is abandoned", "default_value": 30.0},
-    "max_tokens": {"description": "Maximum output tokens", "default_value": 1024},
+    "provider": {"description": "gemini (free tier), openrouter (free models) or anthropic (paid)", "data_type": "str", "default_value": "gemini"},
+    "model": {"description": "Model id; empty = the provider's default", "data_type": "str", "default_value": ""},
+    "api_key_env": {"description": "Name of the environment value holding the API key; empty = the provider's default (e.g. GEMINI_API_KEY). Set the value in the editor's Environment settings, the Hub or .env, never in the graph", "data_type": "str", "default_value": ""},
+    "system": {"description": "System instruction", "data_type": "str", "default_value": ""},
+    "min_interval_s": {"description": "Minimum seconds between requests", "data_type": "f64", "default_value": 10.0},
+    "max_requests_per_day": {"description": "Requests allowed per UTC day (caps cost)", "data_type": "i32", "default_value": 200},
+    "timeout_s": {"description": "Seconds before a request is abandoned", "data_type": "f64", "default_value": 30.0},
+    "max_tokens": {"description": "Maximum output tokens", "data_type": "i32", "default_value": 1024},
 }
 
 _PROVIDER_NOTE = (
@@ -210,8 +210,8 @@ class LLMDescribeImageNode(_LLMNode):
             "data_type": "str",
             "default_value": "Describe what this image shows in one short sentence.",
         },
-        "schema": {"description": "Optional JSON Schema for structured output", "default_value": ""},
-        "image_mime": {"description": "MIME type of the image bytes", "default_value": "image/jpeg"},
+        "schema": {"description": "Optional JSON Schema for structured output", "data_type": "str", "default_value": ""},
+        "image_mime": {"description": "MIME type of the image bytes", "data_type": "str", "default_value": "image/jpeg"},
         "send_images": {
             "description": "Allow sending images to the provider (turn off for live cameras without consent)",
             "data_type": "bool",
@@ -295,8 +295,8 @@ class LLMInterpretNode(_LLMNode):
             "data_type": "str",
             "default_value": "Interpret these measurements.",
         },
-        "labels": {"description": "Comma-separated names for the feature values", "default_value": ""},
-        "schema": {"description": "JSON Schema of the reply (object)", "default_value": ""},
+        "labels": {"description": "Comma-separated names for the feature values", "data_type": "str", "default_value": ""},
+        "schema": {"description": "JSON Schema of the reply (object)", "data_type": "str", "default_value": ""},
         "send_images": {
             "description": "Include the latest image in requests",
             "data_type": "bool",
